@@ -19,7 +19,7 @@ import org.eclipse.egit.github.core.service.UserService;
  * @author jccastrejon
  * 
  */
-public class GitHubController {
+public class GitHubService {
 	private final static UserService userService = new UserService();
 	private final static IssueService issueService = new IssueService();
 	private final static CommitService commitService = new CommitService();
@@ -38,26 +38,26 @@ public class GitHubController {
 		List<CommitFile> commitFiles;
 
 		returnValue = null;
-		user = GitHubController.userService.getUser(login);
+		user = GitHubService.userService.getUser(login);
 
 		if (user != null) {
 			issues = new ArrayList<Issue>();
 			commitFiles = new ArrayList<CommitFile>();
 
-			for (Repository repository : GitHubController.repositoryService.getRepositories(login)) {
+			for (Repository repository : GitHubService.repositoryService.getRepositories(login)) {
 				// Current work
-				for (RepositoryCommit commit : GitHubController.commitService.getCommits(repository)) {
+				for (RepositoryCommit commit : GitHubService.commitService.getCommits(repository)) {
 					if (user.getLogin().equals(commit.getCommitter().getLogin())) {
-						commitFiles.addAll(GitHubController.commitService.getCommit(repository, commit.getSha())
+						commitFiles.addAll(GitHubService.commitService.getCommit(repository, commit.getSha())
 						        .getFiles());
 					}
 				}
 
 				// Pending work
-				for (Issue issue : GitHubController.issueService.getIssues(login, repository.getName(), null)) {
+				for (Issue issue : GitHubService.issueService.getIssues(login, repository.getName(), null)) {
 					if (user.getLogin().equals(issue.getAssignee().getLogin())) {
 						if (issue.getState().equals("open")) {
-							issues.add(GitHubController.issueService.getIssue(repository, issue.getNumber()));
+							issues.add(GitHubService.issueService.getIssue(repository, issue.getNumber()));
 						}
 					}
 				}

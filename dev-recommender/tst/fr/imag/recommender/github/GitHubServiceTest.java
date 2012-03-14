@@ -1,17 +1,18 @@
 package fr.imag.recommender.github;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 
 import org.junit.Test;
 
-public class GitHubControllerTest {
+public class GitHubServiceTest {
 
 	@Test
 	public void test() throws IOException {
 		UsageData usageData;
 
-		usageData = GitHubController.getUserData("jccastrejon");
+		usageData = GitHubService.getUserData("jccastrejon");
 		assertNotNull(usageData);
 	}
 }
