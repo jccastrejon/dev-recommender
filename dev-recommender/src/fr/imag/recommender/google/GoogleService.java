@@ -5,7 +5,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -16,7 +21,15 @@ import java.util.logging.Logger;
  */
 public class GoogleService {
 
-	private static Logger logger = Logger.getLogger(GoogleService.class.getName());
+	/**
+	 * 
+	 */
+	private static final ExecutorService executorService = Executors.newFixedThreadPool(4);
+
+	/**
+	 * 
+	 */
+	private static final Logger logger = Logger.getLogger(GoogleService.class.getName());
 
 	/**
 	 * 
@@ -31,13 +44,14 @@ public class GoogleService {
 		BufferedReader reader;
 		String projectName;
 		List<Project> projects;
-		List<String> filesUrls;
-		List<String> filesNames;
-		List<String> projectImports;
+		List<Future<Project>> candidateProjects;
+		Collection<Callable<Project>> tasks;
 
 		reader = null;
+		tasks = new ArrayList<Callable<Project>>();
 		projects = new ArrayList<Project>();
 		try {
+
 			reader = new BufferedReader(
 			        new InputStreamReader(new URL("http://code.google.com/u/" + login).openStream()));
 
@@ -50,21 +64,19 @@ public class GoogleService {
 					repository = GoogleService.getRepository(projectName);
 
 					if (repository != null) {
-						filesUrls = GoogleService.getProjectFiles(repository);
-						projectImports = GoogleService.getProjectImports(projectName, filesUrls);
-
-						// Keep only file names without package information
-						filesNames = new ArrayList<String>(filesUrls.size());
-						for (String fileUrl : filesUrls) {
-							filesNames.add(fileUrl.substring(fileUrl.lastIndexOf('/') + 1));
-						}
-
-						projects.add(new Project(projectName, filesNames, projectImports));
+						// Get project usage data
+						tasks.add(GoogleService.getProjectCallable(repository, projectName));
 					}
 				}
 			}
-		} catch (IOException e) {
-			GoogleService.logger.log(Level.INFO, "No usage data found for user: " + login);
+
+			candidateProjects = GoogleService.executorService.invokeAll(tasks);
+			for (Future<Project> project : candidateProjects) {
+				projects.add(project.get());
+			}
+		} catch (Exception e) {
+			GoogleService.logger.log(Level.INFO, "An error ocurred while getting usage data found for user: " + login
+			        + ", error: " + e.getMessage());
 		} finally {
 			if (reader != null) {
 				reader.close();
@@ -77,6 +89,44 @@ public class GoogleService {
 	/**
 	 * 
 	 * @param repository
+	 * @param projectName
+	 * @param projects
+	 * @return
+	 */
+	private static Callable<Project> getProjectCallable(final String repository, final String projectName) {
+		return new Callable<Project>() {
+			@Override
+			public Project call() throws Exception {
+				Project returnValue;
+				List<String> filesUrls;
+				List<String> filesNames;
+				List<String> projectImports;
+
+				try {
+					filesUrls = GoogleService.getProjectFiles(repository);
+					projectImports = GoogleService.getProjectImports(projectName, filesUrls);
+
+					// Keep only file names without package information
+					filesNames = new ArrayList<String>(filesUrls.size());
+					for (String fileUrl : filesUrls) {
+						filesNames.add(fileUrl.substring(fileUrl.lastIndexOf('/') + 1));
+					}
+
+					returnValue = new Project(projectName, filesNames, projectImports);
+				} catch (IOException e) {
+					returnValue = null;
+					GoogleService.logger
+					        .log(Level.INFO, "Error while getting usage data for repository: " + repository);
+				}
+
+				return returnValue;
+			}
+		};
+	}
+
+	/**
+	 * 
+	 * @param repository
 	 * @return
 	 * @throws IOException
 	 */
@@ -84,7 +134,7 @@ public class GoogleService {
 		List<String> returnValue;
 
 		returnValue = new ArrayList<String>();
-		returnValue = GoogleService.getDirectoryContents(repository, returnValue);
+		GoogleService.getDirectoryContents(repository, returnValue);
 
 		return returnValue;
 	}
@@ -112,10 +162,10 @@ public class GoogleService {
 	 * @return
 	 * @throws IOException
 	 */
-	private static List<String> getDirectoryContents(final String url, final List<String> returnValue)
-	        throws IOException {
+	private static void getDirectoryContents(final String url, final List<String> returnValue) throws IOException {
 		int startIndex;
 		String inputLine;
+		String content;
 		BufferedReader reader;
 
 		reader = null;
@@ -125,18 +175,19 @@ public class GoogleService {
 				startIndex = inputLine.indexOf("<li><a href=");
 				if (startIndex > 0) {
 					startIndex = startIndex + "<li><a href=".length() + 1;
+					content = inputLine.substring(startIndex, inputLine.indexOf("\"", startIndex));
 
-					// At this version we only support Java
-					if (inputLine.contains(".java")) {
-						returnValue.add(url + inputLine.substring(startIndex, inputLine.indexOf("\"", startIndex)));
-					}
+					// No hidden files or directories
+					if (!content.startsWith(".")) {
+						// At this version we only support Java
+						if (content.contains(".java")) {
+							returnValue.add(url + content);
+						}
 
-					// Add child elements
-					if (inputLine.contains("/")) {
-						GoogleService
-						        .getDirectoryContents(
-						                url + inputLine.substring(startIndex, inputLine.indexOf("\"", startIndex)),
-						                returnValue);
+						// Add child elements
+						if (content.contains("/")) {
+							GoogleService.getDirectoryContents(url + content, returnValue);
+						}
 					}
 				}
 			}
@@ -147,8 +198,6 @@ public class GoogleService {
 				reader.close();
 			}
 		}
-
-		return returnValue;
 	}
 
 	/**
