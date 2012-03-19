@@ -27,11 +27,16 @@ public class GoogleService {
 	public static UsageData getUsageData(final String login) throws IOException {
 		int startIndex;
 		String inputLine;
+		String repository;
 		BufferedReader reader;
-		List<String> projects;
+		String projectName;
+		List<Project> projects;
+		List<String> filesUrls;
+		List<String> filesNames;
+		List<String> projectImports;
 
 		reader = null;
-		projects = new ArrayList<String>();
+		projects = new ArrayList<Project>();
 		try {
 			reader = new BufferedReader(
 			        new InputStreamReader(new URL("http://code.google.com/u/" + login).openStream()));
@@ -40,17 +45,22 @@ public class GoogleService {
 			while ((inputLine = reader.readLine()) != null) {
 				startIndex = inputLine.indexOf("_go('/p/");
 				if (startIndex > 0) {
-					projects.add(inputLine.substring(startIndex + 8, inputLine.indexOf('\'', startIndex + 9)));
-				}
-			}
+					startIndex = startIndex + "_go('/p/".length();
+					projectName = (inputLine.substring(startIndex, inputLine.indexOf('\'', startIndex + 1)));
+					repository = GoogleService.getRepository(projectName);
 
-			// Get latest state
-			for (String project : projects) {
-				reader = GoogleService.getRepositoryReader(project);
+					if (repository != null) {
+						filesUrls = GoogleService.getProjectFiles(repository);
+						projectImports = GoogleService.getProjectImports(projectName, filesUrls);
 
-				if (reader != null) {
-					System.out.println("project: " + project + ":" + reader);
-					reader.close();
+						// Keep only file names without package information
+						filesNames = new ArrayList<String>(filesUrls.size());
+						for (String fileUrl : filesUrls) {
+							filesNames.add(fileUrl.substring(fileUrl.lastIndexOf('/') + 1));
+						}
+
+						projects.add(new Project(projectName, filesNames, projectImports));
+					}
 				}
 			}
 		} catch (IOException e) {
@@ -61,25 +71,145 @@ public class GoogleService {
 			}
 		}
 
-		return new UsageData();
+		return new UsageData(projects);
+	}
+
+	/**
+	 * 
+	 * @param repository
+	 * @return
+	 * @throws IOException
+	 */
+	private static List<String> getProjectFiles(final String repository) throws IOException {
+		List<String> returnValue;
+
+		returnValue = new ArrayList<String>();
+		returnValue = GoogleService.getDirectoryContents(repository, returnValue);
+
+		return returnValue;
+	}
+
+	/**
+	 * 
+	 * @param repository
+	 * @return
+	 * @throws IOException
+	 */
+	private static List<String> getProjectImports(final String repository, final List<String> files) throws IOException {
+		List<String> returnValue;
+
+		returnValue = new ArrayList<String>();
+		for (String file : files) {
+			returnValue.addAll(GoogleService.getClassImports(file));
+		}
+
+		return returnValue;
+	}
+
+	/**
+	 * 
+	 * @param url
+	 * @return
+	 * @throws IOException
+	 */
+	private static List<String> getDirectoryContents(final String url, final List<String> returnValue)
+	        throws IOException {
+		int startIndex;
+		String inputLine;
+		BufferedReader reader;
+
+		reader = null;
+		try {
+			reader = new BufferedReader(new InputStreamReader(new URL(url).openStream()));
+			while ((inputLine = reader.readLine()) != null) {
+				startIndex = inputLine.indexOf("<li><a href=");
+				if (startIndex > 0) {
+					startIndex = startIndex + "<li><a href=".length() + 1;
+
+					// At this version we only support Java
+					if (inputLine.contains(".java")) {
+						returnValue.add(url + inputLine.substring(startIndex, inputLine.indexOf("\"", startIndex)));
+					}
+
+					// Add child elements
+					if (inputLine.contains("/")) {
+						GoogleService
+						        .getDirectoryContents(
+						                url + inputLine.substring(startIndex, inputLine.indexOf("\"", startIndex)),
+						                returnValue);
+					}
+				}
+			}
+		} catch (IOException e) {
+			GoogleService.logger.log(Level.INFO, "No content found for url: " + url);
+		} finally {
+			if (reader != null) {
+				reader.close();
+			}
+		}
+
+		return returnValue;
+	}
+
+	/**
+	 * 
+	 * @param url
+	 * @return
+	 * @throws IOException
+	 */
+	private static List<String> getClassImports(final String url) throws IOException {
+		int startIndex;
+		String inputLine;
+		BufferedReader reader;
+		List<String> returnValue;
+
+		returnValue = new ArrayList<String>();
+		reader = null;
+		try {
+			reader = new BufferedReader(new InputStreamReader(new URL(url).openStream()));
+			while ((inputLine = reader.readLine()) != null) {
+				// Class content has started, import section is over
+				if (inputLine.contains("{")) {
+					break;
+				}
+
+				startIndex = inputLine.indexOf("import");
+				if (startIndex >= 0) {
+					startIndex = startIndex + "import".length() + 1;
+					returnValue.add(inputLine.substring(startIndex, inputLine.indexOf(";", startIndex)));
+				}
+			}
+		} catch (IOException e) {
+			GoogleService.logger.log(Level.INFO, "No imports found for class: " + url);
+		} finally {
+			if (reader != null) {
+				reader.close();
+			}
+		}
+
+		return returnValue;
 	}
 
 	/**
 	 * 
 	 * @param project
 	 * @return
+	 * @throws IOException
 	 */
-	private static BufferedReader getRepositoryReader(final String project) {
+	private static String getRepository(final String project) throws IOException {
 		int startIndex;
 		String inputLine;
+		String returnValue;
 		String repositoryType;
-		BufferedReader returnValue;
+		BufferedReader reader;
 
+		reader = null;
+		returnValue = null;
 		try {
 			repositoryType = "svn";
-			returnValue = new BufferedReader(new InputStreamReader(new URL("http://code.google.com/p/" + project
+			reader = new BufferedReader(new InputStreamReader(new URL("http://code.google.com/p/" + project
 			        + "/source/checkout").openStream()));
-			while ((inputLine = returnValue.readLine()) != null) {
+			while ((inputLine = reader.readLine()) != null) {
 				startIndex = inputLine.indexOf("checkoutcmd");
 				if (startIndex > 0) {
 					repositoryType = inputLine.substring(startIndex + "checkoutcmd".length() + 2,
@@ -87,11 +217,16 @@ public class GoogleService {
 				}
 			}
 
-			returnValue.close();
-			returnValue = new BufferedReader(new InputStreamReader(new URL("http://" + project + ".googlecode.com/"
+			reader.close();
+			reader = new BufferedReader(new InputStreamReader(new URL("http://" + project + ".googlecode.com/"
 			        + repositoryType + "/").openStream()));
+			returnValue = "http://" + project + ".googlecode.com/" + repositoryType + "/";
 		} catch (IOException e) {
-			returnValue = null;
+			GoogleService.logger.log(Level.INFO, "No repository found for user: " + project);
+		} finally {
+			if (reader != null) {
+				reader.close();
+			}
 		}
 
 		return returnValue;
