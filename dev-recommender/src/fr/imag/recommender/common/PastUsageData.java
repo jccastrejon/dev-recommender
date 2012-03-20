@@ -1,20 +1,22 @@
-package fr.imag.recommender.google;
+package fr.imag.recommender.common;
 
 import java.util.List;
+
+import fr.imag.recommender.googlecode.Project;
 
 /**
  * 
  * @author jccastrejon
  * 
  */
-public class UsageData {
+public class PastUsageData {
 
 	/**
 	 * 
 	 */
 	private List<Project> projects;
 
-	public UsageData(List<Project> projects) {
+	public PastUsageData(List<Project> projects) {
 		this.projects = projects;
 	}
 

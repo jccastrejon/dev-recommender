@@ -10,10 +10,11 @@ import org.eclipse.egit.github.core.CommitFile;
 import org.eclipse.egit.github.core.Issue;
 import org.eclipse.egit.github.core.Repository;
 import org.eclipse.egit.github.core.RepositoryCommit;
-import org.eclipse.egit.github.core.client.RequestException;
 import org.eclipse.egit.github.core.service.CommitService;
 import org.eclipse.egit.github.core.service.IssueService;
 import org.eclipse.egit.github.core.service.RepositoryService;
+
+import fr.imag.recommender.common.PastUsageData;
 
 /**
  * 
@@ -31,9 +32,29 @@ public class GitHubService {
 	 * 
 	 * @param login
 	 * @return
+	 */
+	public static PastUsageData getPastUsageData(final String login) {
+		PastUsageData returnValue;
+
+		try {
+			for (Repository repository : GitHubService.repositoryService.getRepositories(login)) {
+				System.out.println(repository.getHtmlUrl());
+			}
+		} catch (IOException exception) {
+			GitHubService.logger.log(Level.INFO, "No usage data found for user: " + login);
+		}
+
+		returnValue = null;
+		return returnValue;
+	}
+
+	/**
+	 * 
+	 * @param login
+	 * @return
 	 * @throws IOException
 	 */
-	public static UsageData getUsageData(final String login) throws IOException {
+	public static CurrentUsageData getCurrentUsageData(final String login) {
 		List<Issue> issues;
 		List<CommitFile> commitFiles;
 
@@ -60,10 +81,10 @@ public class GitHubService {
 					}
 				}
 			}
-		} catch (RequestException exception) {
+		} catch (IOException exception) {
 			GitHubService.logger.log(Level.INFO, "No usage data found for user: " + login);
 		}
 
-		return new UsageData(issues, commitFiles);
+		return new CurrentUsageData(issues, commitFiles);
 	}
 }

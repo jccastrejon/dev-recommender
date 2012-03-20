@@ -1,6 +1,7 @@
-package fr.imag.recommender.google;
+package fr.imag.recommender.googlecode;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 
@@ -10,9 +11,9 @@ import java.util.List;
 public class Project {
 	private String name;
 	private List<String> files;
-	private List<String> imports;
+	private Set<String> imports;
 
-	public Project(String name, List<String> files, List<String> imports) {
+	public Project(String name, List<String> files, Set<String> imports) {
 		super();
 		this.name = name;
 		this.files = files;
@@ -35,11 +36,11 @@ public class Project {
 		this.files = files;
 	}
 
-	public List<String> getImports() {
+	public Set<String> getImports() {
 		return imports;
 	}
 
-	public void setImports(List<String> imports) {
+	public void setImports(Set<String> imports) {
 		this.imports = imports;
 	}
 

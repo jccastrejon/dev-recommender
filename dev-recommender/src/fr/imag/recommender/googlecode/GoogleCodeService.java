@@ -1,4 +1,4 @@
-package fr.imag.recommender.google;
+package fr.imag.recommender.googlecode;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -6,7 +6,9 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,12 +16,14 @@ import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import fr.imag.recommender.common.PastUsageData;
+
 /**
  * 
  * @author jccastrejon
  * 
  */
-public class GoogleService {
+public class GoogleCodeService {
 
 	/**
 	 * 
@@ -29,7 +33,7 @@ public class GoogleService {
 	/**
 	 * 
 	 */
-	private static final Logger logger = Logger.getLogger(GoogleService.class.getName());
+	private static final Logger logger = Logger.getLogger(GoogleCodeService.class.getName());
 
 	/**
 	 * 
@@ -37,7 +41,7 @@ public class GoogleService {
 	 * @return
 	 * @throws IOException
 	 */
-	public static UsageData getUsageData(final String login) throws IOException {
+	public static PastUsageData getPastUsageData(final String login) throws IOException {
 		int startIndex;
 		String inputLine;
 		String repository;
@@ -61,21 +65,21 @@ public class GoogleService {
 				if (startIndex > 0) {
 					startIndex = startIndex + "_go('/p/".length();
 					projectName = (inputLine.substring(startIndex, inputLine.indexOf('\'', startIndex + 1)));
-					repository = GoogleService.getRepository(projectName);
+					repository = GoogleCodeService.getRepository(projectName);
 
 					if (repository != null) {
 						// Get project usage data
-						tasks.add(GoogleService.getProjectCallable(repository, projectName));
+						tasks.add(GoogleCodeService.getProjectCallable(repository, projectName));
 					}
 				}
 			}
 
-			candidateProjects = GoogleService.executorService.invokeAll(tasks);
+			candidateProjects = GoogleCodeService.executorService.invokeAll(tasks);
 			for (Future<Project> project : candidateProjects) {
 				projects.add(project.get());
 			}
 		} catch (Exception e) {
-			GoogleService.logger.log(Level.INFO, "An error ocurred while getting usage data found for user: " + login
+			GoogleCodeService.logger.log(Level.INFO, "An error ocurred while getting usage data found for user: " + login
 			        + ", error: " + e.getMessage());
 		} finally {
 			if (reader != null) {
@@ -83,7 +87,7 @@ public class GoogleService {
 			}
 		}
 
-		return new UsageData(projects);
+		return new PastUsageData(projects);
 	}
 
 	/**
@@ -100,11 +104,11 @@ public class GoogleService {
 				Project returnValue;
 				List<String> filesUrls;
 				List<String> filesNames;
-				List<String> projectImports;
+				Set<String> projectImports;
 
 				try {
-					filesUrls = GoogleService.getProjectFiles(repository);
-					projectImports = GoogleService.getProjectImports(projectName, filesUrls);
+					filesUrls = GoogleCodeService.getProjectFiles(repository);
+					projectImports = GoogleCodeService.getProjectImports(projectName, filesUrls);
 
 					// Keep only file names without package information
 					filesNames = new ArrayList<String>(filesUrls.size());
@@ -115,7 +119,7 @@ public class GoogleService {
 					returnValue = new Project(projectName, filesNames, projectImports);
 				} catch (IOException e) {
 					returnValue = null;
-					GoogleService.logger
+					GoogleCodeService.logger
 					        .log(Level.INFO, "Error while getting usage data for repository: " + repository);
 				}
 
@@ -134,7 +138,7 @@ public class GoogleService {
 		List<String> returnValue;
 
 		returnValue = new ArrayList<String>();
-		GoogleService.getDirectoryContents(repository, returnValue);
+		GoogleCodeService.getDirectoryContents(repository, returnValue);
 
 		return returnValue;
 	}
@@ -145,12 +149,12 @@ public class GoogleService {
 	 * @return
 	 * @throws IOException
 	 */
-	private static List<String> getProjectImports(final String repository, final List<String> files) throws IOException {
-		List<String> returnValue;
+	private static Set<String> getProjectImports(final String repository, final List<String> files) throws IOException {
+		Set<String> returnValue;
 
-		returnValue = new ArrayList<String>();
+		returnValue = new HashSet<String>();
 		for (String file : files) {
-			returnValue.addAll(GoogleService.getClassImports(file));
+			returnValue.addAll(GoogleCodeService.getClassImports(file));
 		}
 
 		return returnValue;
@@ -186,13 +190,13 @@ public class GoogleService {
 
 						// Add child elements
 						if (content.contains("/")) {
-							GoogleService.getDirectoryContents(url + content, returnValue);
+							GoogleCodeService.getDirectoryContents(url + content, returnValue);
 						}
 					}
 				}
 			}
 		} catch (IOException e) {
-			GoogleService.logger.log(Level.INFO, "No content found for url: " + url);
+			GoogleCodeService.logger.log(Level.INFO, "No content found for url: " + url);
 		} finally {
 			if (reader != null) {
 				reader.close();
@@ -206,13 +210,13 @@ public class GoogleService {
 	 * @return
 	 * @throws IOException
 	 */
-	private static List<String> getClassImports(final String url) throws IOException {
+	private static Set<String> getClassImports(final String url) throws IOException {
 		int startIndex;
 		String inputLine;
 		BufferedReader reader;
-		List<String> returnValue;
+		Set<String> returnValue;
 
-		returnValue = new ArrayList<String>();
+		returnValue = new HashSet<String>();
 		reader = null;
 		try {
 			reader = new BufferedReader(new InputStreamReader(new URL(url).openStream()));
@@ -229,7 +233,7 @@ public class GoogleService {
 				}
 			}
 		} catch (IOException e) {
-			GoogleService.logger.log(Level.INFO, "No imports found for class: " + url);
+			GoogleCodeService.logger.log(Level.INFO, "No imports found for class: " + url);
 		} finally {
 			if (reader != null) {
 				reader.close();
@@ -271,7 +275,7 @@ public class GoogleService {
 			        + repositoryType + "/").openStream()));
 			returnValue = "http://" + project + ".googlecode.com/" + repositoryType + "/";
 		} catch (IOException e) {
-			GoogleService.logger.log(Level.INFO, "No repository found for user: " + project);
+			GoogleCodeService.logger.log(Level.INFO, "No repository found for user: " + project);
 		} finally {
 			if (reader != null) {
 				reader.close();

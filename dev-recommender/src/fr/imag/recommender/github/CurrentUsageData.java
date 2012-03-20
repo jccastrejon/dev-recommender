@@ -10,7 +10,7 @@ import org.eclipse.egit.github.core.Issue;
  * @author jccastrejon
  * 
  */
-public class UsageData {
+public class CurrentUsageData {
 
 	/**
 	 * 
@@ -27,7 +27,7 @@ public class UsageData {
 	 * @param issues
 	 * @param commitFiles
 	 */
-	public UsageData(final List<Issue> issues, final List<CommitFile> commitFiles) {
+	public CurrentUsageData(final List<Issue> issues, final List<CommitFile> commitFiles) {
 		this.issues = issues;
 		this.commitFiles = commitFiles;
 	}
