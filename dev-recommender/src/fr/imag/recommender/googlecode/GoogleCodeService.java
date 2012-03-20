@@ -1,9 +1,6 @@
 package fr.imag.recommender.googlecode;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -15,6 +12,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.select.Elements;
 
 import fr.imag.recommender.common.PastUsageData;
 import fr.imag.recommender.common.UtilService;
@@ -38,39 +41,40 @@ public class GoogleCodeService {
 
 	/**
 	 * 
+	 */
+	private static final String GOOGLE_CODE_URL = "http://code.google.com";
+
+	/**
+	 * 
 	 * @param login
 	 * @return
-	 * @throws IOException
 	 */
-	public static PastUsageData getPastUsageData(final String login) throws IOException {
-		int startIndex;
-		String inputLine;
-		String repository;
-		BufferedReader reader;
+	public static PastUsageData getPastUsageData(final String login) {
+		String href;
+		Document document;
+		Elements contents;
 		String projectName;
 		List<Project> projects;
-		List<Future<Project>> candidateProjects;
 		Collection<Callable<Project>> tasks;
+		List<Future<Project>> candidateProjects;
 
-		reader = null;
 		tasks = new ArrayList<Callable<Project>>();
 		projects = new ArrayList<Project>();
 		try {
+			document = Jsoup.connect(GoogleCodeService.GOOGLE_CODE_URL + "/u/" + login).get();
+			contents = document.select("td.id");
 
-			reader = new BufferedReader(
-			        new InputStreamReader(new URL("http://code.google.com/u/" + login).openStream()));
-
-			// List of public projects
-			while ((inputLine = reader.readLine()) != null) {
-				startIndex = inputLine.indexOf("_go('/p/");
-				if (startIndex > 0) {
-					startIndex = startIndex + "_go('/p/".length();
-					projectName = (inputLine.substring(startIndex, inputLine.indexOf('\'', startIndex + 1)));
-					repository = GoogleCodeService.getRepository(projectName);
-
-					if (repository != null) {
-						// Get project usage data
-						tasks.add(GoogleCodeService.getProjectCallable(repository, projectName));
+			// Analyze tree contents
+			for (Element content : contents) {
+				for (Node childNode : content.childNodes()) {
+					// Get tree content reference
+					if ("a".equals(childNode.nodeName())) {
+						href = childNode.attr("href");
+						projectName = href.replace("/p/", "");
+						projectName = projectName.substring(0, projectName.lastIndexOf('/'));
+						tasks.add(GoogleCodeService.getProjectCallable(GoogleCodeService.getRepository(projectName),
+						        projectName));
+						break;
 					}
 				}
 			}
@@ -79,13 +83,8 @@ public class GoogleCodeService {
 			for (Future<Project> project : candidateProjects) {
 				projects.add(project.get());
 			}
-		} catch (Exception e) {
-			GoogleCodeService.logger.log(Level.INFO, "An error ocurred while getting usage data found for user: "
-			        + login + ", error: " + e.getMessage());
-		} finally {
-			if (reader != null) {
-				reader.close();
-			}
+		} catch (Exception exception) {
+			GoogleCodeService.logger.log(Level.INFO, "No usage data found for user: " + login);
 		}
 
 		return new PastUsageData(projects);
@@ -111,7 +110,7 @@ public class GoogleCodeService {
 					projectImports = new HashSet<String>();
 					GoogleCodeService.getDirectoryContents(repository, projectFiles, projectImports);
 					returnValue = new Project(projectName, projectFiles, projectImports);
-				} catch (IOException e) {
+				} catch (Exception e) {
 					returnValue = null;
 					GoogleCodeService.logger.log(Level.INFO, "Error while getting usage data for repository: "
 					        + repository);
@@ -127,46 +126,45 @@ public class GoogleCodeService {
 	 * @param url
 	 * @param projectFiles
 	 * @param projectImports
-	 * @throws IOException
 	 */
 	private static void getDirectoryContents(final String url, final List<String> projectFiles,
-	        final Set<String> projectImports) throws IOException {
-		int startIndex;
-		String inputLine;
-		String content;
-		BufferedReader reader;
+	        final Set<String> projectImports) {
+		String href;
+		Document document;
+		Elements contents;
 
-		reader = null;
 		try {
-			reader = new BufferedReader(new InputStreamReader(new URL(url).openStream()));
-			while ((inputLine = reader.readLine()) != null) {
-				startIndex = inputLine.indexOf("<li><a href=");
-				if (startIndex > 0) {
-					startIndex = startIndex + "<li><a href=".length() + 1;
-					content = inputLine.substring(startIndex, inputLine.indexOf("\"", startIndex));
+			document = Jsoup.connect(url).get();
+			contents = document.select("li");
 
-					// No hidden files or directories
-					if (!content.startsWith(".")) {
-						// At this version we only support Java
-						if (content.contains(".java")) {
-							// Keep only the file name without path
-							projectFiles.add(content.substring(content.lastIndexOf('/') + 1));
-							projectImports.addAll(UtilService.getClassImports(url + content));
-						}
+			// Analyze tree contents
+			for (Element content : contents) {
+				for (Node childNode : content.childNodes()) {
+					// Get tree content reference
+					if ("a".equals(childNode.nodeName())) {
+						href = childNode.attr("href");
 
-						// Add child elements
-						if (content.contains("/")) {
-							GoogleCodeService.getDirectoryContents(url + content, projectFiles, projectImports);
+						// Ignore hidden files
+						if (!href.startsWith(".")) {
+							// At this version we only support Java
+							if (href.endsWith(".java")) {
+								// Keep only the file name without path
+								projectFiles.add(href.substring(href.lastIndexOf('/') + 1, href.indexOf(".java")));
+								projectImports.addAll(UtilService.getClassImports(url + "/" + href));
+							}
+
+							// Add child elements
+							else if (href.endsWith("/")) {
+								GoogleCodeService.getDirectoryContents(url + href, projectFiles, projectImports);
+							}
+
+							break;
 						}
 					}
 				}
 			}
-		} catch (IOException e) {
+		} catch (IOException exception) {
 			GoogleCodeService.logger.log(Level.INFO, "No content found for url: " + url);
-		} finally {
-			if (reader != null) {
-				reader.close();
-			}
 		}
 	}
 
@@ -176,37 +174,29 @@ public class GoogleCodeService {
 	 * @return
 	 * @throws IOException
 	 */
-	private static String getRepository(final String project) throws IOException {
-		int startIndex;
-		String inputLine;
+	private static String getRepository(final String project) {
+		Document document;
+		Element element;
 		String returnValue;
 		String repositoryType;
-		BufferedReader reader;
 
-		reader = null;
 		returnValue = null;
 		try {
+			// Default repository type is svn
 			repositoryType = "svn";
-			reader = new BufferedReader(new InputStreamReader(new URL("http://code.google.com/p/" + project
-			        + "/source/checkout").openStream()));
-			while ((inputLine = reader.readLine()) != null) {
-				startIndex = inputLine.indexOf("checkoutcmd");
-				if (startIndex > 0) {
-					repositoryType = inputLine.substring(startIndex + "checkoutcmd".length() + 2,
-					        inputLine.indexOf(' ', startIndex + "checkoutcmd".length()));
-				}
+			document = Jsoup.connect(GoogleCodeService.GOOGLE_CODE_URL + "/p/" + project + "/source/checkout").get();
+			element = document.select("#checkoutcmd").first();
+
+			if (element != null) {
+				repositoryType = element.text().substring(0, element.text().indexOf(' '));
 			}
 
-			reader.close();
-			reader = new BufferedReader(new InputStreamReader(new URL("http://" + project + ".googlecode.com/"
-			        + repositoryType + "/").openStream()));
+			// Verify if the repository is available or not
 			returnValue = "http://" + project + ".googlecode.com/" + repositoryType + "/";
+			Jsoup.connect(returnValue);
 		} catch (IOException e) {
-			GoogleCodeService.logger.log(Level.INFO, "No repository found for user: " + project);
-		} finally {
-			if (reader != null) {
-				reader.close();
-			}
+			returnValue = null;
+			GoogleCodeService.logger.log(Level.INFO, "No repository found for repository: " + project);
 		}
 
 		return returnValue;

@@ -63,7 +63,6 @@ public class GitHubService {
 		tasks = new ArrayList<Callable<Project>>();
 		projects = new ArrayList<Project>();
 		try {
-
 			for (Repository repository : GitHubService.repositoryService.getRepositories(login)) {
 				tasks.add(GitHubService.getProjectCallable(login, repository.getName(), repository.getHtmlUrl()));
 			}
@@ -88,9 +87,9 @@ public class GitHubService {
 	 */
 	private static void getDirectoryContents(final String login, final String projectName, final String url,
 	        final List<String> projectFiles, final Set<String> projectImports) {
+		String href;
 		Document document;
 		Elements contents;
-		String href;
 
 		try {
 			document = Jsoup.connect(url).get();
@@ -106,9 +105,9 @@ public class GitHubService {
 						// At this version we only support Java
 						if ((href.startsWith("/" + login + "/" + projectName + "/blob/") && (href.endsWith(".java")))) {
 							// Keep only the file name without path
-							projectFiles.add(href.substring(href.lastIndexOf('/') + 1));
-							projectImports.addAll(UtilService.getClassImports(GitHubService.getRawFile(login, projectName,
-							        href)));
+							projectFiles.add(href.substring(href.lastIndexOf('/') + 1, href.indexOf(".java")));
+							projectImports.addAll(UtilService.getClassImports(GitHubService.getRawFile(login,
+							        projectName, href)));
 						}
 
 						// Add child elements
@@ -116,6 +115,8 @@ public class GitHubService {
 							GitHubService.getDirectoryContents(login, projectName, GitHubService.GITHUB_URL + href,
 							        projectFiles, projectImports);
 						}
+
+						break;
 					}
 				}
 			}
