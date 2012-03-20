@@ -28,8 +28,10 @@ public class GitHubServiceTest {
 
 		// Existing user
 		usageData = GitHubService.getPastUsageData("jccastrejon");
+		assertTrue(usageData.getProjects().size() > 0);
 
 		// Non-existing user
 		usageData = GitHubService.getPastUsageData("jccastrejon-non-existent");
+		assertTrue(usageData.getProjects().isEmpty());
 	}
 }

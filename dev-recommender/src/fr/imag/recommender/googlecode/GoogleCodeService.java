@@ -17,6 +17,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.imag.recommender.common.PastUsageData;
+import fr.imag.recommender.common.UtilService;
 
 /**
  * 
@@ -79,8 +80,8 @@ public class GoogleCodeService {
 				projects.add(project.get());
 			}
 		} catch (Exception e) {
-			GoogleCodeService.logger.log(Level.INFO, "An error ocurred while getting usage data found for user: " + login
-			        + ", error: " + e.getMessage());
+			GoogleCodeService.logger.log(Level.INFO, "An error ocurred while getting usage data found for user: "
+			        + login + ", error: " + e.getMessage());
 		} finally {
 			if (reader != null) {
 				reader.close();
@@ -102,25 +103,18 @@ public class GoogleCodeService {
 			@Override
 			public Project call() throws Exception {
 				Project returnValue;
-				List<String> filesUrls;
-				List<String> filesNames;
+				List<String> projectFiles;
 				Set<String> projectImports;
 
 				try {
-					filesUrls = GoogleCodeService.getProjectFiles(repository);
-					projectImports = GoogleCodeService.getProjectImports(projectName, filesUrls);
-
-					// Keep only file names without package information
-					filesNames = new ArrayList<String>(filesUrls.size());
-					for (String fileUrl : filesUrls) {
-						filesNames.add(fileUrl.substring(fileUrl.lastIndexOf('/') + 1));
-					}
-
-					returnValue = new Project(projectName, filesNames, projectImports);
+					projectFiles = new ArrayList<String>();
+					projectImports = new HashSet<String>();
+					GoogleCodeService.getDirectoryContents(repository, projectFiles, projectImports);
+					returnValue = new Project(projectName, projectFiles, projectImports);
 				} catch (IOException e) {
 					returnValue = null;
-					GoogleCodeService.logger
-					        .log(Level.INFO, "Error while getting usage data for repository: " + repository);
+					GoogleCodeService.logger.log(Level.INFO, "Error while getting usage data for repository: "
+					        + repository);
 				}
 
 				return returnValue;
@@ -130,43 +124,13 @@ public class GoogleCodeService {
 
 	/**
 	 * 
-	 * @param repository
-	 * @return
-	 * @throws IOException
-	 */
-	private static List<String> getProjectFiles(final String repository) throws IOException {
-		List<String> returnValue;
-
-		returnValue = new ArrayList<String>();
-		GoogleCodeService.getDirectoryContents(repository, returnValue);
-
-		return returnValue;
-	}
-
-	/**
-	 * 
-	 * @param repository
-	 * @return
-	 * @throws IOException
-	 */
-	private static Set<String> getProjectImports(final String repository, final List<String> files) throws IOException {
-		Set<String> returnValue;
-
-		returnValue = new HashSet<String>();
-		for (String file : files) {
-			returnValue.addAll(GoogleCodeService.getClassImports(file));
-		}
-
-		return returnValue;
-	}
-
-	/**
-	 * 
 	 * @param url
-	 * @return
+	 * @param projectFiles
+	 * @param projectImports
 	 * @throws IOException
 	 */
-	private static void getDirectoryContents(final String url, final List<String> returnValue) throws IOException {
+	private static void getDirectoryContents(final String url, final List<String> projectFiles,
+	        final Set<String> projectImports) throws IOException {
 		int startIndex;
 		String inputLine;
 		String content;
@@ -185,12 +149,14 @@ public class GoogleCodeService {
 					if (!content.startsWith(".")) {
 						// At this version we only support Java
 						if (content.contains(".java")) {
-							returnValue.add(url + content);
+							// Keep only the file name without path
+							projectFiles.add(content.substring(content.lastIndexOf('/') + 1));
+							projectImports.addAll(UtilService.getClassImports(url + content));
 						}
 
 						// Add child elements
 						if (content.contains("/")) {
-							GoogleCodeService.getDirectoryContents(url + content, returnValue);
+							GoogleCodeService.getDirectoryContents(url + content, projectFiles, projectImports);
 						}
 					}
 				}
@@ -202,45 +168,6 @@ public class GoogleCodeService {
 				reader.close();
 			}
 		}
-	}
-
-	/**
-	 * 
-	 * @param url
-	 * @return
-	 * @throws IOException
-	 */
-	private static Set<String> getClassImports(final String url) throws IOException {
-		int startIndex;
-		String inputLine;
-		BufferedReader reader;
-		Set<String> returnValue;
-
-		returnValue = new HashSet<String>();
-		reader = null;
-		try {
-			reader = new BufferedReader(new InputStreamReader(new URL(url).openStream()));
-			while ((inputLine = reader.readLine()) != null) {
-				// Class content has started, import section is over
-				if (inputLine.contains("{")) {
-					break;
-				}
-
-				startIndex = inputLine.indexOf("import");
-				if (startIndex >= 0) {
-					startIndex = startIndex + "import".length() + 1;
-					returnValue.add(inputLine.substring(startIndex, inputLine.indexOf(";", startIndex)));
-				}
-			}
-		} catch (IOException e) {
-			GoogleCodeService.logger.log(Level.INFO, "No imports found for class: " + url);
-		} finally {
-			if (reader != null) {
-				reader.close();
-			}
-		}
-
-		return returnValue;
 	}
 
 	/**
