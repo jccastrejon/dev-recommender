@@ -7,6 +7,11 @@ import org.junit.Test;
 
 import fr.imag.recommender.common.PastUsageData;
 
+/**
+ * 
+ * @author jccastrejon
+ *
+ */
 public class GitHubServiceTest {
 
 	@Test

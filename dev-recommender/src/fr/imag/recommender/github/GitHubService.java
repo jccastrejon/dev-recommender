@@ -37,10 +37,29 @@ import fr.imag.recommender.googlecode.Project;
  */
 public class GitHubService {
 
+	/**
+	 * 
+	 */
 	private final static String GITHUB_URL = "https://github.com";
+
+	/**
+	 * 
+	 */
 	private final static String GITHUB_RAW_URL = "https://raw.github.com";
+
+	/**
+	 * 
+	 */
 	private final static IssueService issueService = new IssueService();
+
+	/**
+	 * 
+	 */
 	private final static CommitService commitService = new CommitService();
+
+	/**
+	 * 
+	 */
 	private final static RepositoryService repositoryService = new RepositoryService();
 
 	/**
@@ -48,6 +67,9 @@ public class GitHubService {
 	 */
 	private static final ExecutorService executorService = Executors.newFixedThreadPool(4);
 
+	/**
+	 * 
+	 */
 	private static Logger logger = Logger.getLogger(GitHubService.class.getName());
 
 	/**
@@ -75,7 +97,7 @@ public class GitHubService {
 			GitHubService.logger.log(Level.INFO, "No usage data found for user: " + login);
 		}
 
-		return new PastUsageData(projects);
+		return new PastUsageData(projects, UtilService.assignArtifacts(projects));
 	}
 
 	/**

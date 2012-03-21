@@ -87,7 +87,8 @@ public class GoogleCodeService {
 			GoogleCodeService.logger.log(Level.INFO, "No usage data found for user: " + login);
 		}
 
-		return new PastUsageData(projects);
+		UtilService.assignArtifacts(projects);
+		return new PastUsageData(projects, UtilService.assignArtifacts(projects));
 	}
 
 	/**

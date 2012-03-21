@@ -9,6 +9,11 @@ import org.junit.Test;
 import fr.imag.recommender.common.PastUsageData;
 import fr.imag.recommender.googlecode.GoogleCodeService;
 
+/**
+ * 
+ * @author jccastrejon
+ *
+ */
 public class GoogleCodeServiceTest {
 
 	@Test
