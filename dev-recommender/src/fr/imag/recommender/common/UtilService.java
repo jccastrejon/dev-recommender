@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import fr.imag.recommender.googlecode.Project;
 import fr.imag.recommender.mavensearch.MavenSearchService;
 
 /**

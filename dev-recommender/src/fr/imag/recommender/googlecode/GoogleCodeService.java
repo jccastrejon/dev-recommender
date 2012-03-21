@@ -20,6 +20,7 @@ import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
 
 import fr.imag.recommender.common.PastUsageData;
+import fr.imag.recommender.common.Project;
 import fr.imag.recommender.common.UtilService;
 
 /**

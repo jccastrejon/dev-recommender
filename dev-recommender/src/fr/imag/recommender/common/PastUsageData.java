@@ -3,7 +3,6 @@ package fr.imag.recommender.common;
 import java.util.List;
 import java.util.Set;
 
-import fr.imag.recommender.googlecode.Project;
 
 /**
  * 

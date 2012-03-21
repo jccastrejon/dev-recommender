@@ -1,4 +1,4 @@
-package fr.imag.recommender.googlecode;
+package fr.imag.recommender.common;
 
 import java.util.List;
 import java.util.Set;
