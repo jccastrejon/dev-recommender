@@ -10,6 +10,11 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.rest.graphdb.RestGraphDatabase;
+
 import fr.imag.recommender.mavensearch.MavenSearchService;
 
 /**
@@ -23,6 +28,95 @@ public class UtilService {
 	 * 
 	 */
 	private static final Logger logger = Logger.getLogger(UtilService.class.getName());
+
+	/**
+	 * 
+	 */
+	private static final GraphDatabaseService databaseService = new RestGraphDatabase("http://localhost:7474/db/data");
+
+	/**
+	 * 
+	 * @author jccastrejon
+	 * 
+	 */
+	private static enum UsageTypes implements RelationshipType {
+		DEVELOPED, IN_REPOSITORY, HAS_FILE, HAS_IMPORT, CONTAINS, RELATED_TO
+	};
+
+	/**
+	 * 
+	 * @param login
+	 * @param usageData
+	 */
+	public static void savePastUsageData(final String login, final List<PastUsageData> usageData) {
+		Node userNode;
+		Node dataNode;
+		Node fileNode;
+		Node filesNodes;
+		Node dataNodes;
+		Node importNode;
+		Node importsNodes;
+		Node projectNode;
+		Node artifactNode;
+		Node projectsNode;
+		Node artifactsNode;
+
+		if (usageData != null) {
+			userNode = databaseService.createNode();
+			dataNodes = databaseService.createNode();
+
+			dataNodes.setProperty("name", "Background projects");
+			userNode.createRelationshipTo(dataNodes, UtilService.UsageTypes.DEVELOPED);
+			for (PastUsageData pastUsageData : usageData) {
+				dataNode = databaseService.createNode();
+				projectsNode = databaseService.createNode();
+				artifactsNode = databaseService.createNode();
+
+				userNode.setProperty("login", login);
+				projectsNode.setProperty("name", "projects");
+				artifactsNode.setProperty("name", "artifacts");
+				dataNode.setProperty("source", pastUsageData.getSource());
+				dataNode.setProperty("numberProjects", pastUsageData.getProjects().size());
+				dataNode.setProperty("numberArtifacts", pastUsageData.getArtifacts().size());
+
+				dataNodes.createRelationshipTo(dataNode, UtilService.UsageTypes.IN_REPOSITORY);
+				dataNode.createRelationshipTo(projectsNode, UtilService.UsageTypes.CONTAINS);
+				dataNode.createRelationshipTo(artifactsNode, UtilService.UsageTypes.CONTAINS);
+
+				for (Project project : pastUsageData.getProjects()) {
+					projectNode = databaseService.createNode();
+					importsNodes = databaseService.createNode();
+					filesNodes = databaseService.createNode();
+
+					projectNode.setProperty("name", project.getName());
+					importsNodes.setProperty("name", "imports");
+					filesNodes.setProperty("name", "files");
+
+					projectsNode.createRelationshipTo(projectNode, UtilService.UsageTypes.CONTAINS);
+					projectNode.createRelationshipTo(importsNodes, UtilService.UsageTypes.CONTAINS);
+					projectNode.createRelationshipTo(filesNodes, UtilService.UsageTypes.CONTAINS);
+
+					for (String projectFile : project.getFiles()) {
+						fileNode = databaseService.createNode();
+						fileNode.setProperty("name", projectFile);
+						filesNodes.createRelationshipTo(fileNode, UtilService.UsageTypes.HAS_FILE);
+					}
+
+					for (String projectImport : project.getFiles()) {
+						importNode = databaseService.createNode();
+						importNode.setProperty("name", projectImport);
+						importsNodes.createRelationshipTo(importNode, UtilService.UsageTypes.HAS_IMPORT);
+					}
+				}
+
+				for (String artifact : pastUsageData.getArtifacts()) {
+					artifactNode = databaseService.createNode();
+					artifactNode.setProperty("name", artifact);
+					artifactsNode.createRelationshipTo(artifactNode, UtilService.UsageTypes.RELATED_TO);
+				}
+			}
+		}
+	}
 
 	/**
 	 * 

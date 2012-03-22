@@ -89,7 +89,7 @@ public class GoogleCodeService {
 		}
 
 		UtilService.assignArtifacts(projects);
-		return new PastUsageData(projects, UtilService.assignArtifacts(projects));
+		return new PastUsageData(GoogleCodeService.GOOGLE_CODE_URL, projects, UtilService.assignArtifacts(projects));
 	}
 
 	/**

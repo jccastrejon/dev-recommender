@@ -12,7 +12,6 @@ public class Project {
 	private String name;
 	private List<String> files;
 	private Set<String> imports;
-	private Set<String> artifacts;
 
 	public Project(String name, List<String> files, Set<String> imports) {
 		super();
@@ -43,13 +42,5 @@ public class Project {
 
 	public void setImports(Set<String> imports) {
 		this.imports = imports;
-	}
-
-	public Set<String> getArtifacts() {
-		return artifacts;
-	}
-
-	public void setArtifacts(Set<String> artifacts) {
-		this.artifacts = artifacts;
 	}
 }

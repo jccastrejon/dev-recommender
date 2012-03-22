@@ -97,7 +97,7 @@ public class GitHubService {
 			GitHubService.logger.log(Level.INFO, "No usage data found for user: " + login);
 		}
 
-		return new PastUsageData(projects, UtilService.assignArtifacts(projects));
+		return new PastUsageData(GitHubService.GITHUB_URL, projects, UtilService.assignArtifacts(projects));
 	}
 
 	/**
