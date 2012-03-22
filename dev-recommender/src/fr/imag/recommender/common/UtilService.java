@@ -92,6 +92,9 @@ public class UtilService {
 					importsNodes.setProperty("name", "imports");
 					filesNodes.setProperty("name", "files");
 
+					importsNodes.setProperty("numImports", project.getImports().size());
+					filesNodes.setProperty("numFiles", project.getFiles().size());
+
 					projectsNode.createRelationshipTo(projectNode, UtilService.UsageTypes.CONTAINS);
 					projectNode.createRelationshipTo(importsNodes, UtilService.UsageTypes.CONTAINS);
 					projectNode.createRelationshipTo(filesNodes, UtilService.UsageTypes.CONTAINS);
@@ -102,7 +105,7 @@ public class UtilService {
 						filesNodes.createRelationshipTo(fileNode, UtilService.UsageTypes.HAS_FILE);
 					}
 
-					for (String projectImport : project.getFiles()) {
+					for (String projectImport : project.getImports()) {
 						importNode = databaseService.createNode();
 						importNode.setProperty("name", projectImport);
 						importsNodes.createRelationshipTo(importNode, UtilService.UsageTypes.HAS_IMPORT);
