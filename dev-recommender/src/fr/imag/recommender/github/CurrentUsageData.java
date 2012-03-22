@@ -1,8 +1,8 @@
 package fr.imag.recommender.github;
 
 import java.util.List;
+import java.util.Set;
 
-import org.eclipse.egit.github.core.CommitFile;
 import org.eclipse.egit.github.core.Issue;
 
 /**
@@ -20,16 +20,25 @@ public class CurrentUsageData {
 	/**
 	 * 
 	 */
-	private List<CommitFile> commitFiles;
+	private List<String> commitFiles;
 
 	/**
 	 * 
-	 * @param issues
-	 * @param commitFiles
 	 */
-	public CurrentUsageData(final List<Issue> issues, final List<CommitFile> commitFiles) {
+	private Set<String> commitImports;
+
+	/**
+	 * 
+	 */
+	private Set<String> artifacts;
+
+	public CurrentUsageData(List<Issue> issues, List<String> commitFiles, Set<String> commitImports,
+	        Set<String> artifacts) {
+		super();
 		this.issues = issues;
 		this.commitFiles = commitFiles;
+		this.commitImports = commitImports;
+		this.artifacts = artifacts;
 	}
 
 	public List<Issue> getIssues() {
@@ -40,11 +49,27 @@ public class CurrentUsageData {
 		this.issues = issues;
 	}
 
-	public List<CommitFile> getCommitFiles() {
+	public List<String> getCommitFiles() {
 		return commitFiles;
 	}
 
-	public void setCommitFiles(List<CommitFile> commitFiles) {
+	public void setCommitFiles(List<String> commitFiles) {
 		this.commitFiles = commitFiles;
+	}
+
+	public Set<String> getCommitImports() {
+		return commitImports;
+	}
+
+	public void setCommitImports(Set<String> commitImports) {
+		this.commitImports = commitImports;
+	}
+
+	public Set<String> getArtifacts() {
+		return artifacts;
+	}
+
+	public void setArtifacts(Set<String> artifacts) {
+		this.artifacts = artifacts;
 	}
 }

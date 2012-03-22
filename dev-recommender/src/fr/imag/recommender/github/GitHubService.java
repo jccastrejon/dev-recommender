@@ -197,16 +197,28 @@ public class GitHubService {
 
 	/**
 	 * 
+	 * @param blobFile
+	 * @return
+	 */
+	private static String getRawBlobFile(final String blobFile) {
+		return blobFile.replace(GitHubService.GITHUB_URL, GitHubService.GITHUB_RAW_URL).replace("/blob", "");
+	}
+
+	/**
+	 * 
 	 * @param login
 	 * @return
 	 * @throws IOException
 	 */
 	public static CurrentUsageData getCurrentUsageData(final String login) {
+		Issue currentIssue;
 		List<Issue> issues;
-		List<CommitFile> commitFiles;
+		List<String> commitFiles;
+		Set<String> commitImports;
 
 		issues = new ArrayList<Issue>();
-		commitFiles = new ArrayList<CommitFile>();
+		commitFiles = new ArrayList<String>();
+		commitImports = new HashSet<String>();
 
 		try {
 			// Gather work data
@@ -214,8 +226,15 @@ public class GitHubService {
 				// Current work
 				for (RepositoryCommit commit : GitHubService.commitService.getCommits(repository)) {
 					if (login.equals(commit.getCommitter().getLogin())) {
-						commitFiles.addAll(GitHubService.commitService.getCommit(repository, commit.getSha())
-						        .getFiles());
+						for (CommitFile commitFile : GitHubService.commitService.getCommit(repository, commit.getSha())
+						        .getFiles()) {
+							if (UtilService.isSupportedFile(commitFile.getFilename())) {
+								commitFiles.add(commitFile.getFilename().substring(
+								        commitFile.getFilename().lastIndexOf('/') + 1));
+								commitImports.addAll(UtilService.getClassImports(GitHubService
+								        .getRawBlobFile(commitFile.getBlobUrl())));
+							}
+						}
 					}
 				}
 
@@ -223,7 +242,8 @@ public class GitHubService {
 				for (Issue issue : GitHubService.issueService.getIssues(login, repository.getName(), null)) {
 					if (login.equals(issue.getAssignee().getLogin())) {
 						if (issue.getState().equals("open")) {
-							issues.add(GitHubService.issueService.getIssue(repository, issue.getNumber()));
+							currentIssue = GitHubService.issueService.getIssue(repository, issue.getNumber());
+							issues.add(currentIssue);
 						}
 					}
 				}
@@ -232,6 +252,6 @@ public class GitHubService {
 			GitHubService.logger.log(Level.INFO, "No usage data found for user: " + login);
 		}
 
-		return new CurrentUsageData(issues, commitFiles);
+		return new CurrentUsageData(issues, commitFiles, commitImports, UtilService.assignArtifacts(commitImports));
 	}
 }

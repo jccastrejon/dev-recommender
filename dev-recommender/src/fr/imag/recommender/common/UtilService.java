@@ -149,7 +149,7 @@ public class UtilService {
 					returnValue.add(inputLine.substring(startIndex, inputLine.indexOf(";", startIndex)));
 				}
 			}
-		} catch (IOException e) {
+		} catch (Exception e) {
 			UtilService.logger.log(Level.INFO, "No imports found for class: " + url);
 		} finally {
 			if (reader != null) {
@@ -165,12 +165,8 @@ public class UtilService {
 	 * @param projects
 	 */
 	public static Set<String> assignArtifacts(final List<Project> projects) {
-		String artifact;
-		Set<String> packages;
-		Set<String> returnValue;
 		Set<String> allImports;
 
-		returnValue = new HashSet<String>();
 		allImports = new HashSet<String>();
 		for (Project project : projects) {
 			if ((project.getImports() != null) && (!project.getImports().isEmpty())) {
@@ -178,7 +174,21 @@ public class UtilService {
 			}
 		}
 
-		packages = getImportsPackages(allImports);
+		return UtilService.assignArtifacts(allImports);
+	}
+
+	/**
+	 * 
+	 * @param imports
+	 * @return
+	 */
+	public static Set<String> assignArtifacts(final Set<String> imports) {
+		String artifact;
+		Set<String> packages;
+		Set<String> returnValue;
+
+		returnValue = new HashSet<String>();
+		packages = getImportsPackages(imports);
 		for (String projectPackage : packages) {
 			artifact = MavenSearchService.getAssociatedProject(projectPackage);
 			if (artifact != null) {
