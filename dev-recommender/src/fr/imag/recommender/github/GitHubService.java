@@ -127,9 +127,10 @@ public class GitHubService {
 						href = childNode.attr("href");
 
 						// At this version we only support Java
-						if ((href.startsWith("/" + login + "/" + projectName + "/blob/") && (href.endsWith(".java")))) {
+						if ((href.startsWith("/" + login + "/" + projectName + "/blob/") && (UtilService
+						        .isSupportedFile(href)))) {
 							// Keep only the file name without path
-							projectFiles.add(href.substring(href.lastIndexOf('/') + 1, href.indexOf(".java")));
+							projectFiles.add(href.substring(href.lastIndexOf('/') + 1));
 							projectImports.addAll(UtilService.getClassImports(GitHubService.getRawFile(login,
 							        projectName, href)));
 						}

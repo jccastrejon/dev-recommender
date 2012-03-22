@@ -151,9 +151,9 @@ public class GoogleCodeService {
 						// Ignore hidden files
 						if (!href.startsWith(".")) {
 							// At this version we only support Java
-							if (href.endsWith(".java")) {
+							if (UtilService.isSupportedFile(href)) {
 								// Keep only the file name without path
-								projectFiles.add(href.substring(href.lastIndexOf('/') + 1, href.indexOf(".java")));
+								projectFiles.add(href.substring(href.lastIndexOf('/') + 1));
 								projectImports.addAll(UtilService.getClassImports(url + "/" + href));
 							}
 
