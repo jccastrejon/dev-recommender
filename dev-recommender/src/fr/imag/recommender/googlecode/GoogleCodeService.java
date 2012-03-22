@@ -82,7 +82,9 @@ public class GoogleCodeService {
 
 			candidateProjects = GoogleCodeService.executorService.invokeAll(tasks);
 			for (Future<Project> project : candidateProjects) {
-				projects.add(project.get());
+				if (project.get() != null) {
+					projects.add(project.get());
+				}
 			}
 		} catch (Exception exception) {
 			GoogleCodeService.logger.log(Level.INFO, "No usage data found for user: " + login);

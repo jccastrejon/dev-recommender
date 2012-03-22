@@ -91,7 +91,9 @@ public class GitHubService {
 
 			candidateProjects = GitHubService.executorService.invokeAll(tasks);
 			for (Future<Project> project : candidateProjects) {
-				projects.add(project.get());
+				if (project.get() != null) {
+					projects.add(project.get());
+				}
 			}
 		} catch (Exception exception) {
 			GitHubService.logger.log(Level.INFO, "No usage data found for user: " + login);

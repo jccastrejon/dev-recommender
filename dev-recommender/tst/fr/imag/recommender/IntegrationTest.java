@@ -9,6 +9,7 @@ import fr.imag.recommender.common.PastUsageData;
 import fr.imag.recommender.common.UtilService;
 import fr.imag.recommender.github.GitHubService;
 import fr.imag.recommender.googlecode.GoogleCodeService;
+import fr.imag.recommender.local.LocalService;
 
 /**
  * 
@@ -24,6 +25,7 @@ public class IntegrationTest {
 		usageData = new ArrayList<PastUsageData>();
 		usageData.add(GitHubService.getPastUsageData("jccastrejon"));
 		usageData.add(GoogleCodeService.getPastUsageData("jccastrejon"));
+		usageData.add(LocalService.getPastUsageData("jccastrejon", "/Users/jccastrejon/java/workspace/PetClinic"));
 
 		UtilService.savePastUsageData("jccastrejon", usageData);
 	}

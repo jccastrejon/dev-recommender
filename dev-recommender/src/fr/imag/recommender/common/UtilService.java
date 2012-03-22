@@ -173,7 +173,9 @@ public class UtilService {
 		returnValue = new HashSet<String>();
 		allImports = new HashSet<String>();
 		for (Project project : projects) {
-			allImports.addAll(project.getImports());
+			if ((project.getImports() != null) && (!project.getImports().isEmpty())) {
+				allImports.addAll(project.getImports());
+			}
 		}
 
 		packages = getImportsPackages(allImports);
@@ -215,5 +217,15 @@ public class UtilService {
 		}
 
 		return returnValue;
+	}
+
+	/**
+	 * 
+	 * @param fileName
+	 * @return
+	 */
+	public static boolean isSupportedFile(final String fileName) {
+		// At this version we only support Java based files
+		return (fileName.endsWith(".java") || fileName.endsWith(".aj"));
 	}
 }
