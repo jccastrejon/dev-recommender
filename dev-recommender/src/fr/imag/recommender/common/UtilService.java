@@ -15,6 +15,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.rest.graphdb.RestGraphDatabase;
 
+import fr.imag.recommender.github.CurrentUsageData;
 import fr.imag.recommender.mavensearch.MavenSearchService;
 
 /**
@@ -40,33 +41,106 @@ public class UtilService {
 	 * 
 	 */
 	private static enum UsageTypes implements RelationshipType {
-		DEVELOPED, IN_REPOSITORY, HAS_FILE, HAS_IMPORT, CONTAINS, RELATED_TO
+		IS_DEVELOPING, HAS_DEVELOPED, IN_REPOSITORY, HAS_FILE, HAS_IMPORT, CONTAINS, RELATED_TO
 	};
+
+	/**
+	 * 
+	 * @param login
+	 * @param pastUsageData
+	 * @param currentUsageData
+	 */
+	public static void saveUsageData(final String login, final List<PastUsageData> pastUsageData,
+	        final CurrentUsageData currentUsageData) {
+		Node userNode;
+
+		try {
+			userNode = UtilService.savePastUsageData(login, pastUsageData);
+			UtilService.saveCurrentUsageData(userNode, currentUsageData);
+		} catch (Exception e) {
+			UtilService.logger.log(Level.INFO, "An error ocurred while saving data for user: " + login);
+		}
+	}
+
+	/**
+	 * 
+	 * @param userNode
+	 * @param usageData
+	 */
+	public static void saveCurrentUsageData(final Node userNode, final CurrentUsageData usageData) {
+		Node dataNode;
+		Node filesNode;
+		Node commitNode;
+		Node importNode;
+		Node importsNode;
+		Node artifactNode;
+		Node artifactsNode;
+
+		if ((userNode != null) && (usageData != null)) {
+			dataNode = databaseService.createNode();
+			filesNode = databaseService.createNode();
+			artifactsNode = databaseService.createNode();
+			importsNode = databaseService.createNode();
+
+			dataNode.setProperty("name", "Current work");
+			dataNode.setProperty("numberFiles", usageData.getCommitFiles().size());
+			dataNode.setProperty("numberArtifacts", usageData.getArtifacts().size());
+			dataNode.setProperty("numberImports", usageData.getCommitImports().size());
+
+			userNode.createRelationshipTo(dataNode, UtilService.UsageTypes.IS_DEVELOPING);
+			dataNode.createRelationshipTo(filesNode, UtilService.UsageTypes.CONTAINS);
+			dataNode.createRelationshipTo(artifactsNode, UtilService.UsageTypes.CONTAINS);
+			dataNode.createRelationshipTo(importsNode, UtilService.UsageTypes.CONTAINS);
+
+			filesNode.setProperty("name", "files");
+			artifactsNode.setProperty("name", "artifacts");
+			importsNode.setProperty("name", "imports");
+
+			for (String commitFile : usageData.getCommitFiles()) {
+				commitNode = databaseService.createNode();
+				commitNode.setProperty("name", commitFile);
+				filesNode.createRelationshipTo(commitNode, UtilService.UsageTypes.HAS_FILE);
+			}
+
+			for (String projectImport : usageData.getCommitImports()) {
+				importNode = databaseService.createNode();
+				importNode.setProperty("name", projectImport);
+				importsNode.createRelationshipTo(importNode, UtilService.UsageTypes.HAS_IMPORT);
+			}
+
+			for (String artifact : usageData.getArtifacts()) {
+				artifactNode = databaseService.createNode();
+				artifactNode.setProperty("name", artifact);
+				artifactsNode.createRelationshipTo(artifactNode, UtilService.UsageTypes.RELATED_TO);
+			}
+		}
+	}
 
 	/**
 	 * 
 	 * @param login
 	 * @param usageData
 	 */
-	public static void savePastUsageData(final String login, final List<PastUsageData> usageData) {
+	public static Node savePastUsageData(final String login, final List<PastUsageData> usageData) {
 		Node userNode;
 		Node dataNode;
 		Node fileNode;
-		Node filesNodes;
 		Node dataNodes;
 		Node importNode;
-		Node importsNodes;
+		Node filesNodes;
 		Node projectNode;
+		Node importsNode;
 		Node artifactNode;
 		Node projectsNode;
 		Node artifactsNode;
 
+		userNode = null;
 		if (usageData != null) {
 			userNode = databaseService.createNode();
 			dataNodes = databaseService.createNode();
 
-			dataNodes.setProperty("name", "Background projects");
-			userNode.createRelationshipTo(dataNodes, UtilService.UsageTypes.DEVELOPED);
+			dataNodes.setProperty("name", "Background work");
+			userNode.createRelationshipTo(dataNodes, UtilService.UsageTypes.HAS_DEVELOPED);
 			for (PastUsageData pastUsageData : usageData) {
 				dataNode = databaseService.createNode();
 				projectsNode = databaseService.createNode();
@@ -85,18 +159,18 @@ public class UtilService {
 
 				for (Project project : pastUsageData.getProjects()) {
 					projectNode = databaseService.createNode();
-					importsNodes = databaseService.createNode();
+					importsNode = databaseService.createNode();
 					filesNodes = databaseService.createNode();
 
 					projectNode.setProperty("name", project.getName());
-					importsNodes.setProperty("name", "imports");
+					importsNode.setProperty("name", "imports");
 					filesNodes.setProperty("name", "files");
 
-					importsNodes.setProperty("numImports", project.getImports().size());
+					importsNode.setProperty("numImports", project.getImports().size());
 					filesNodes.setProperty("numFiles", project.getFiles().size());
 
 					projectsNode.createRelationshipTo(projectNode, UtilService.UsageTypes.CONTAINS);
-					projectNode.createRelationshipTo(importsNodes, UtilService.UsageTypes.CONTAINS);
+					projectNode.createRelationshipTo(importsNode, UtilService.UsageTypes.CONTAINS);
 					projectNode.createRelationshipTo(filesNodes, UtilService.UsageTypes.CONTAINS);
 
 					for (String projectFile : project.getFiles()) {
@@ -108,7 +182,7 @@ public class UtilService {
 					for (String projectImport : project.getImports()) {
 						importNode = databaseService.createNode();
 						importNode.setProperty("name", projectImport);
-						importsNodes.createRelationshipTo(importNode, UtilService.UsageTypes.HAS_IMPORT);
+						importsNode.createRelationshipTo(importNode, UtilService.UsageTypes.HAS_IMPORT);
 					}
 				}
 
@@ -119,6 +193,8 @@ public class UtilService {
 				}
 			}
 		}
+
+		return userNode;
 	}
 
 	/**

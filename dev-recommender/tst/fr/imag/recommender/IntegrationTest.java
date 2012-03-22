@@ -7,6 +7,7 @@ import org.junit.Test;
 
 import fr.imag.recommender.common.PastUsageData;
 import fr.imag.recommender.common.UtilService;
+import fr.imag.recommender.github.CurrentUsageData;
 import fr.imag.recommender.github.GitHubService;
 import fr.imag.recommender.googlecode.GoogleCodeService;
 import fr.imag.recommender.local.LocalService;
@@ -20,13 +21,15 @@ public class IntegrationTest {
 
 	@Test
 	public void testPastUsage() {
-		List<PastUsageData> usageData;
+		CurrentUsageData currentUsageData;
+		List<PastUsageData> pastUsageData;
 
-		usageData = new ArrayList<PastUsageData>();
-		usageData.add(GitHubService.getPastUsageData("jccastrejon"));
-		usageData.add(GoogleCodeService.getPastUsageData("jccastrejon"));
-		usageData.add(LocalService.getPastUsageData("jccastrejon", "/Users/jccastrejon/java/workspace/PetClinic"));
+		pastUsageData = new ArrayList<PastUsageData>();
+		pastUsageData.add(GitHubService.getPastUsageData("jccastrejon"));
+		pastUsageData.add(GoogleCodeService.getPastUsageData("jccastrejon"));
+		pastUsageData.add(LocalService.getPastUsageData("jccastrejon", "/Users/jccastrejon/java/workspace/PetClinic"));
 
-		UtilService.savePastUsageData("jccastrejon", usageData);
+		currentUsageData = GitHubService.getCurrentUsageData("jccastrejon");
+		UtilService.saveUsageData("jccastrejon", pastUsageData, currentUsageData);
 	}
 }
