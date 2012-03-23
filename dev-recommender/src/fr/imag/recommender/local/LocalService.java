@@ -78,12 +78,12 @@ public class LocalService {
 			@Override
 			public Project call() throws Exception {
 				Project returnValue;
-				List<String> projectFiles;
+				Set<String> projectFiles;
 				Set<String> projectImports;
 
 				returnValue = null;
 				if (path.exists()) {
-					projectFiles = new ArrayList<String>();
+					projectFiles = new HashSet<String>();
 					projectImports = new HashSet<String>();
 					LocalService.getDirectoryContents(path, projectFiles, projectImports);
 					returnValue = new Project(path.getName(), projectFiles, projectImports);
@@ -100,7 +100,7 @@ public class LocalService {
 	 * @param projectFiles
 	 * @param projectImports
 	 */
-	private static void getDirectoryContents(final File path, final List<String> projectFiles,
+	private static void getDirectoryContents(final File path, final Set<String> projectFiles,
 	        final Set<String> projectImports) {
 		if (path.exists()) {
 			for (File child : path.listFiles()) {

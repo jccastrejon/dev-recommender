@@ -20,7 +20,7 @@ public class CurrentUsageData {
 	/**
 	 * 
 	 */
-	private List<String> commitFiles;
+	private Set<String> commitFiles;
 
 	/**
 	 * 
@@ -32,7 +32,7 @@ public class CurrentUsageData {
 	 */
 	private Set<String> artifacts;
 
-	public CurrentUsageData(List<Issue> issues, List<String> commitFiles, Set<String> commitImports,
+	public CurrentUsageData(List<Issue> issues, Set<String> commitFiles, Set<String> commitImports,
 	        Set<String> artifacts) {
 		super();
 		this.issues = issues;
@@ -49,11 +49,11 @@ public class CurrentUsageData {
 		this.issues = issues;
 	}
 
-	public List<String> getCommitFiles() {
+	public Set<String> getCommitFiles() {
 		return commitFiles;
 	}
 
-	public void setCommitFiles(List<String> commitFiles) {
+	public void setCommitFiles(Set<String> commitFiles) {
 		this.commitFiles = commitFiles;
 	}
 

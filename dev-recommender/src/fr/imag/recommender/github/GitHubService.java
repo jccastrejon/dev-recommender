@@ -110,7 +110,7 @@ public class GitHubService {
 	 * @param projectFiles
 	 */
 	private static void getDirectoryContents(final String login, final String projectName, final String url,
-	        final List<String> projectFiles, final Set<String> projectImports) {
+	        final Set<String> projectFiles, final Set<String> projectImports) {
 		String href;
 		Document document;
 		Elements contents;
@@ -163,12 +163,12 @@ public class GitHubService {
 			@Override
 			public Project call() throws Exception {
 				Project returnValue;
-				List<String> projectFiles;
+				Set<String> projectFiles;
 				Set<String> projectImports;
 
 				try {
 					projectImports = new HashSet<String>();
-					projectFiles = new ArrayList<String>();
+					projectFiles = new HashSet<String>();
 					GitHubService.getDirectoryContents(login, projectName, repositoryUrl, projectFiles, projectImports);
 
 					returnValue = new Project(projectName, projectFiles, projectImports);
@@ -213,11 +213,11 @@ public class GitHubService {
 	public static CurrentUsageData getCurrentUsageData(final String login) {
 		Issue currentIssue;
 		List<Issue> issues;
-		List<String> commitFiles;
+		Set<String> commitFiles;
 		Set<String> commitImports;
 
 		issues = new ArrayList<Issue>();
-		commitFiles = new ArrayList<String>();
+		commitFiles = new HashSet<String>();
 		commitImports = new HashSet<String>();
 
 		try {

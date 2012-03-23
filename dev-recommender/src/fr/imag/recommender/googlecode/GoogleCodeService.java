@@ -106,11 +106,11 @@ public class GoogleCodeService {
 			@Override
 			public Project call() throws Exception {
 				Project returnValue;
-				List<String> projectFiles;
+				Set<String> projectFiles;
 				Set<String> projectImports;
 
 				try {
-					projectFiles = new ArrayList<String>();
+					projectFiles = new HashSet<String>();
 					projectImports = new HashSet<String>();
 					GoogleCodeService.getDirectoryContents(repository, projectFiles, projectImports);
 					returnValue = new Project(projectName, projectFiles, projectImports);
@@ -131,7 +131,7 @@ public class GoogleCodeService {
 	 * @param projectFiles
 	 * @param projectImports
 	 */
-	private static void getDirectoryContents(final String url, final List<String> projectFiles,
+	private static void getDirectoryContents(final String url, final Set<String> projectFiles,
 	        final Set<String> projectImports) {
 		String href;
 		Document document;

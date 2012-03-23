@@ -1,6 +1,5 @@
 package fr.imag.recommender.common;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -10,10 +9,10 @@ import java.util.Set;
  */
 public class Project {
 	private String name;
-	private List<String> files;
+	private Set<String> files;
 	private Set<String> imports;
 
-	public Project(String name, List<String> files, Set<String> imports) {
+	public Project(String name, Set<String> files, Set<String> imports) {
 		super();
 		this.name = name;
 		this.files = files;
@@ -28,11 +27,11 @@ public class Project {
 		this.name = name;
 	}
 
-	public List<String> getFiles() {
+	public Set<String> getFiles() {
 		return files;
 	}
 
-	public void setFiles(List<String> files) {
+	public void setFiles(Set<String> files) {
 		this.files = files;
 	}
 
