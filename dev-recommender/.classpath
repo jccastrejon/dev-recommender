@@ -20,5 +20,6 @@
 	<classpathentry kind="lib" path="lib/jersey-servlet-1.12.jar"/>
 	<classpathentry kind="lib" path="lib/jettison-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/jsr311-api-1.1.1.jar"/>
+	<classpathentry kind="lib" path="lib/neo4j-lucene-index-1.6.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

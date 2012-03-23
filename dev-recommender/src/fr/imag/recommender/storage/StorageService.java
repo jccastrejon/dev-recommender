@@ -7,6 +7,8 @@ import java.util.logging.Logger;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.index.Index;
+import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.rest.graphdb.RestGraphDatabase;
 
 import fr.imag.recommender.common.PastUsageData;
@@ -28,7 +30,17 @@ public class StorageService {
 	/**
 	 * 
 	 */
-	private static final GraphDatabaseService databaseService = new RestGraphDatabase("http://localhost:7474/db/data");
+	private static final GraphDatabaseService databaseService;
+
+	/**
+	 * 
+	 */
+	private static final Index<Node> userIndex;
+
+	static {
+		databaseService = new RestGraphDatabase("http://localhost:7474/db/data");
+		userIndex = databaseService.index().forNodes("users");
+	}
 
 	/**
 	 * 
@@ -47,11 +59,9 @@ public class StorageService {
 	 */
 	public static void saveUsageData(final String login, final List<PastUsageData> pastUsageData,
 	        final CurrentUsageData currentUsageData) {
-		Node userNode;
-
 		try {
-			userNode = StorageService.savePastUsageData(login, pastUsageData);
-			StorageService.saveCurrentUsageData(userNode, currentUsageData);
+			StorageService.savePastUsageData(login, pastUsageData);
+			StorageService.saveCurrentUsageData(login, currentUsageData);
 		} catch (Exception e) {
 			StorageService.logger.log(Level.INFO, "An error ocurred while saving data for user: " + login);
 		}
@@ -59,11 +69,12 @@ public class StorageService {
 
 	/**
 	 * 
-	 * @param userNode
+	 * @param login
 	 * @param usageData
 	 */
-	public static void saveCurrentUsageData(final Node userNode, final CurrentUsageData usageData) {
+	public static void saveCurrentUsageData(final String login, final CurrentUsageData usageData) {
 		Node dataNode;
+		Node userNode;
 		Node filesNode;
 		Node commitNode;
 		Node importNode;
@@ -71,7 +82,8 @@ public class StorageService {
 		Node artifactNode;
 		Node artifactsNode;
 
-		if ((userNode != null) && (usageData != null)) {
+		if (usageData != null) {
+			userNode = StorageService.getUserNode(login);
 			dataNode = databaseService.createNode();
 			filesNode = databaseService.createNode();
 			artifactsNode = databaseService.createNode();
@@ -116,7 +128,7 @@ public class StorageService {
 	 * @param login
 	 * @param usageData
 	 */
-	public static Node savePastUsageData(final String login, final List<PastUsageData> usageData) {
+	public static void savePastUsageData(final String login, final List<PastUsageData> usageData) {
 		Node userNode;
 		Node dataNode;
 		Node fileNode;
@@ -129,9 +141,8 @@ public class StorageService {
 		Node projectsNode;
 		Node artifactsNode;
 
-		userNode = null;
 		if (usageData != null) {
-			userNode = databaseService.createNode();
+			userNode = StorageService.getUserNode(login);
 			dataNodes = databaseService.createNode();
 
 			dataNodes.setProperty("name", "Background work");
@@ -141,7 +152,6 @@ public class StorageService {
 				projectsNode = databaseService.createNode();
 				artifactsNode = databaseService.createNode();
 
-				userNode.setProperty("login", login);
 				projectsNode.setProperty("name", "projects");
 				artifactsNode.setProperty("name", "artifacts");
 				dataNode.setProperty("source", pastUsageData.getSource());
@@ -188,7 +198,26 @@ public class StorageService {
 				}
 			}
 		}
+	}
 
-		return userNode;
+	/**
+	 * 
+	 * @param login
+	 * @return
+	 */
+	private static Node getUserNode(final String login) {
+		Node returnValue;
+		IndexHits<Node> hits;
+
+		hits = StorageService.userIndex.get("login", login);
+		returnValue = hits.getSingle();
+
+		if (returnValue == null) {
+			returnValue = StorageService.databaseService.createNode();
+			returnValue.setProperty("login", login);
+			userIndex.add(returnValue, "login", login);
+		}
+
+		return returnValue;
 	}
 }
