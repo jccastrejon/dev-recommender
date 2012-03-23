@@ -31,4 +31,12 @@ public class StorageServiceTest {
 		currentUsageData = GitHubService.getCurrentUsageData("jccastrejon");
 		StorageService.saveUsageData("jccastrejon", pastUsageData, currentUsageData);
 	}
+
+	@Test
+	public void testSaveCurrentUsageData() {
+		CurrentUsageData currentUsageData;
+
+		currentUsageData = GitHubService.getCurrentUsageData("jccastrejon");
+		StorageService.saveCurrentUsageData("jccastrejon", currentUsageData);
+	}
 }

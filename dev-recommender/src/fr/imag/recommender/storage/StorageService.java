@@ -1,11 +1,13 @@
 package fr.imag.recommender.storage;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
@@ -37,8 +39,14 @@ public class StorageService {
 	 */
 	private static final Index<Node> userIndex;
 
+	/**
+	 * 
+	 */
+	private static final Index<Node> currentWorkIndex;
+
 	static {
 		databaseService = new RestGraphDatabase("http://localhost:7474/db/data");
+		currentWorkIndex = databaseService.index().forNodes("currentWork");
 		userIndex = databaseService.index().forNodes("users");
 	}
 
@@ -81,20 +89,43 @@ public class StorageService {
 		Node importsNode;
 		Node artifactNode;
 		Node artifactsNode;
+		List<Node> deleteNodes;
 
 		if (usageData != null) {
 			userNode = StorageService.getUserNode(login);
-			dataNode = databaseService.createNode();
-			filesNode = databaseService.createNode();
-			artifactsNode = databaseService.createNode();
-			importsNode = databaseService.createNode();
+
+			dataNode = StorageService.currentWorkIndex.get("login", login).getSingle();
+			if (dataNode == null) {
+				dataNode = databaseService.createNode();
+
+				StorageService.currentWorkIndex.add(dataNode, "login", login);
+				userNode.createRelationshipTo(dataNode, StorageService.UsageTypes.IS_DEVELOPING);
+			}
 
 			dataNode.setProperty("name", "Current work");
 			dataNode.setProperty("numberFiles", usageData.getCommitFiles().size());
 			dataNode.setProperty("numberArtifacts", usageData.getArtifacts().size());
 			dataNode.setProperty("numberImports", usageData.getCommitImports().size());
 
-			userNode.createRelationshipTo(dataNode, StorageService.UsageTypes.IS_DEVELOPING);
+			// Delete current usage data
+			deleteNodes = new ArrayList<Node>();
+			for (Relationship mainRelationship : dataNode.getRelationships(StorageService.UsageTypes.CONTAINS)) {
+				deleteNodes.add(mainRelationship.getEndNode());
+				for (Relationship dataRelationship : mainRelationship.getEndNode().getRelationships()) {
+					deleteNodes.add(dataRelationship.getEndNode());
+					dataRelationship.delete();
+				}
+
+				for (Node deleteNode : deleteNodes) {
+					deleteNode.delete();
+				}
+			}
+
+			// Add new usage data
+			filesNode = databaseService.createNode();
+			artifactsNode = databaseService.createNode();
+			importsNode = databaseService.createNode();
+
 			dataNode.createRelationshipTo(filesNode, StorageService.UsageTypes.CONTAINS);
 			dataNode.createRelationshipTo(artifactsNode, StorageService.UsageTypes.CONTAINS);
 			dataNode.createRelationshipTo(importsNode, StorageService.UsageTypes.CONTAINS);
